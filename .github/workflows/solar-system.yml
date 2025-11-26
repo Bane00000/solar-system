@@ -161,10 +161,20 @@ jobs:
 
   dev-deploy:
     needs: docker
+    env:
+      CHANGE_MINIKUBE_NONE_USER: "true"
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v6
+
+    - name: Download minikube
+      run: |
+        curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+
+    - name: Start minikube
+      run: minikube start --driver=docker --wait=all --memory=4096 --cpus=2
 
     - name: Install kubectl cli
       uses: azure/setup-kubectl@v4
@@ -176,3 +186,7 @@ jobs:
         kubectl version --short
         echo ---------------------------------
         kubectl get nodes
+
+    - name: Tear down minikube (optional)
+      if: always()
+      run: minikube delete
