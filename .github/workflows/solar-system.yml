@@ -163,6 +163,9 @@ jobs:
     needs: docker
     env:
       CHANGE_MINIKUBE_NONE_USER: "true"
+    outputs:
+      node-port: ${{ steps.set-vars.outputs.NODE_PORT }}
+      ingress-ip: ${{ steps.set-vars.outputs.INGRESS_IP }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -221,3 +224,24 @@ jobs:
 
     - name: Depleoy to Development Environment
       run: kubectl apply -f kubernetes/development
+
+    - name: Set Application Ingress Host URL
+      id: set-vars
+      run: |
+        NODE_PORT=$(kubectl -n development get svc solar-system -o jsonpath='{.spec.ports[0].nodePort}')
+        INGRESS_IP=$(minikube ip)
+        echo "NODE_PORT=$NODE_PORT" >> $GITHUB_ENV
+        echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_ENV
+        echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
+        echo "INGRESS_IP=$INGRESS_IP" >> $GITHUB_OUTPUT
+
+  integration-testing:
+    name: Dev Integration Testing
+    needs: dev-deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test URL Output using CURL and JQ
+      run: |
+        echo "Ingress IP: ${{ needs.dev-deploy.outputs.ingress-ip }}"
+        echo "Node Port: ${{ needs.dev-deploy.outputs.node-port }}"
+        curl http://${{ needs.dev-deploy.outputs.ingress-ip }}:${{ needs.dev-deploy.outputs.node-port }}/live -s | jq -r .status | grep -i live
