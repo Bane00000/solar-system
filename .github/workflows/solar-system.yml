@@ -160,7 +160,11 @@ jobs:
           ghcr.io/bane00000/solar-system:${{ github.sha }}
 
   dev-deploy:
+    name: Development Deployment
     needs: docker
+    environment:
+      name: development
+      url: https://${{ steps.set-vars.outputs.INGRESS_IP }}
     env:
       CHANGE_MINIKUBE_NONE_USER: "true"
     outputs:
